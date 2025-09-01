@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Energy Saving Calculator</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to right, #a8e063, #56ab2f);
+      color: #333;
+      text-align: center;
+      padding: 20px;
+      transition: background 0.5s, color 0.5s;
+    }
+    .dark-mode { background: #121212; color: #f5f5f5; }
+    .container {
+      max-width: 900px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      transition: background 0.5s, color 0.5s;
+    }
+    .dark-mode .container { background: #1e1e1e; color: #f5f5f5; }
+    h1 { color: #2e7d32; }
+    .dark-mode h1 { color: #90ee90; }
+    label { display: block; margin-top: 10px; font-weight: bold; }
+    input, select {
+      width: 90%; padding: 8px; margin: 5px 0 15px 0;
+      border-radius: 8px; border: 1px solid #ccc;
+    }
+    button {
+      background: #2e7d32; color: white;
+      padding: 10px 20px; border: none; border-radius: 8px;
+      cursor: pointer; margin: 10px; transition: transform 0.3s;
+    }
+    button:hover { background: #1b5e20; transform: scale(1.05); }
+    table { width: 100%; margin-top: 20px; border-collapse: collapse; }
+    th, td { padding: 10px; border: 1px solid #ddd; }
+    th { background: #c8e6c9; }
+    .result {
+      margin-top: 20px; font-size: 1.2em; color: #1b5e20;
+      opacity: 0; transform: translateY(20px);
+      transition: all 0.6s ease;
+    }
+    .result.show { opacity: 1; transform: translateY(0); }
+    .dark-mode .result { color: #90ee90; }
+    canvas { margin-top: 20px; }
+    .mode-btn { position: absolute; top: 10px; right: 10px; }
+    /* Creators Section */
+    .creators {
+      margin-top: 40px; padding: 30px 20px;
+      border-radius: 15px; background: #e8f5e9;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    .dark-mode .creators { background: #263238; }
+    .creators h2 { color: #2e7d32; margin-bottom: 20px; font-size: 1.8em; }
+    .dark-mode .creators h2 { color: #90ee90; }
+    .creator-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px; }
+    .creator-card {
+      background: #ffffff; border-radius: 12px; padding: 15px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .dark-mode .creator-card { background: #37474f; }
+    .creator-card:hover { transform: translateY(-5px); box-shadow: 0 6px 16px rgba(0,0,0,0.2); }
+    .creator-icon { font-size: 30px; margin-bottom: 10px; color: #2e7d32; }
+    .dark-mode .creator-icon { color: #90ee90; }
+    .creator-name { font-weight: bold; font-size: 1.1em; }
+  </style>
+</head>
+<body>
+  <button class="mode-btn" onclick="toggleMode()">🌙 Toggle Dark/Light Mode</button>
+  <div class="container">
+    <h1>Energy Saving Calculator ⚡🌍</h1>
+
+    <label for="appliance">Choose Appliance:</label>
+    <select id="appliance">
+      <option value="">-- Select --</option>
+      <option value="Fan" data-power="75">Fan (75W)</option>
+      <option value="Tube Light" data-power="40">Tube Light (40W)</option>
+      <option value="LED Bulb" data-power="10">LED Bulb (10W)</option>
+      <option value="Refrigerator" data-power="150">Refrigerator (150W)</option>
+      <option value="Air Conditioner" data-power="1500">Air Conditioner (1500W)</option>
+      <option value="Laptop" data-power="60">Laptop (60W)</option>
+    </select>
+
+    <label for="customPower">Or Enter Custom Power (Watts):</label>
+    <input type="number" id="customPower" placeholder="e.g. 100">
+
+    <label for="hours">Usage per Day (Hours):</label>
+    <input type="number" id="hours" placeholder="e.g. 5">
+
+    <label for="rate">Electricity Rate (₹ per kWh):</label>
+    <input type="number" id="rate" placeholder="e.g. 8">
+
+    <button onclick="addAppliance()">Add Appliance</button>
+    <button onclick="calculateTotal()">Calculate Total</button>
+    <button onclick="downloadPDF()">📑 Download Report</button>
+    <button onclick="downloadCSV()">📂 Export CSV</button>
+
+    <table id="applianceTable">
+      <thead>
+        <tr>
+          <th>Appliance</th><th>Power (W)</th><th>Hours</th><th>Energy (kWh/day)</th><th>Cost (₹/day)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <div class="result" id="result"></div>
+    <canvas id="energyChart" width="400" height="300"></canvas>
+    <div class="result" id="tips"></div>
+    <div class="result" id="efficiency"></div>
+
+    <!-- Solar ROI Calculator -->
+    <div class="result" id="solarROI"></div>
+
+    <!-- Creators Section -->
+    <div class="creators">
+      <h2>👨‍💻 Meet the Creators</h2>
+      <div class="creator-grid">
+        <div class="creator-card"><div class="creator-icon">👨‍💻</div><div class="creator-name">Dipak Patil</div></div>
+        <div class="creator-card"><div class="creator-icon">👨‍💻</div><div class="creator-name">Aayush Sonawane</div></div>
+        <div class="creator-card"><div class="creator-icon">👨‍💻</div><div class="creator-name">Tejas Chincholkar</div></div>
+        <div class="creator-card"><div class="creator-icon">👩‍💻</div><div class="creator-name">Sowmya Gourkhade</div></div>
+        <div class="creator-card"><div class="creator-icon">👩‍💻</div><div class="creator-name">Sakshi Barahate</div></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let appliances = [];
+    let chart;
+
+    function toggleMode() { document.body.classList.toggle("dark-mode"); }
+
+    function addAppliance() {
+      let applianceDropdown = document.getElementById("appliance");
+      let appliance = applianceDropdown.value || "Custom Appliance";
+      let power = document.getElementById("customPower").value || applianceDropdown.selectedOptions[0].getAttribute("data-power");
+      let hours = document.getElementById("hours").value;
+      let rate = document.getElementById("rate").value;
+
+      if (!power || !hours || !rate) { alert("⚠ Please fill all fields!"); return; }
+
+      let energy = (power * hours) / 1000; 
+      let cost = energy * rate;
+
+      appliances.push({ appliance, power, hours, energy, cost, rate });
+      updateTable();
+      clearFields();
+    }
+
+    function updateTable() {
+      let tbody = document.getElementById("applianceTable").getElementsByTagName("tbody")[0];
+      tbody.innerHTML = "";
+      appliances.forEach(app => {
+        let row = `<tr><td>${app.appliance}</td><td>${app.power}</td><td>${app.hours}</td><td>${app.energy.toFixed(2)}</td><td>₹${app.cost.toFixed(2)}</td></tr>`;
+        tbody.innerHTML += row;
+      });
+    }
+
+    function clearFields() { document.getElementById("customPower").value = ""; document.getElementById("hours").value = ""; }
+
+    function calculateTotal() {
+      if (appliances.length === 0) { alert("⚠ Please add at least one appliance!"); return; }
+
+      let totalEnergy = appliances.reduce((sum, a) => sum + a.energy, 0);
+      let totalCost = appliances.reduce((sum, a) => sum + a.cost, 0);
+      let monthlyCost = totalCost * 30;
+      let yearlyCost = totalCost * 365;
+      let carbon = totalEnergy * 0.82;
+      let treesEquivalent = (carbon * 365 / 22).toFixed(1); // yearly comparison
+
+      document.getElementById("result").innerHTML = 
+        `⚡ Daily Energy: <b>${totalEnergy.toFixed(2)} kWh</b><br>
+         💰 Daily Cost: <b>₹${totalCost.toFixed(2)}</b><br>
+         📆 Monthly Cost: <b>₹${monthlyCost.toFixed(2)}</b><br>
+         📅 Yearly Cost: <b>₹${yearlyCost.toFixed(2)}</b><br>
+         🌍 Carbon Footprint: <b>${carbon.toFixed(2)} kg CO₂/day</b><br>
+         🌳 Equivalent to planting <b>${treesEquivalent} trees/year</b>`;
+      document.getElementById("result").classList.add("show");
+
+      let tips = "";
+      if (totalEnergy > 10) tips += "🌱 Use appliances with higher star ratings.<br>";
+      if (totalCost > 200) tips += "💡 Consider switching to solar.<br>";
+      if (appliances.some(a => a.hours > 8)) tips += "🔌 Use timers to save energy.<br>";
+      document.getElementById("tips").innerHTML = tips || "✅ Great! Your usage is efficient.";
+      document.getElementById("tips").classList.add("show");
+
+      let score = "A";
+      if (totalEnergy > 15) score = "B";
+      if (totalEnergy > 25) score = "C";
+      if (totalEnergy > 35) score = "D";
+      if (totalEnergy > 50) score = "E";
+      document.getElementById("efficiency").innerHTML = `🏆 Efficiency Score: <b>${score}</b>`;
+      document.getElementById("efficiency").classList.add("show");
+
+      let solarSavings = (yearlyCost * 0.8).toFixed(2);
+      let roiYears = (80000 / solarSavings).toFixed(1);
+      document.getElementById("solarROI").innerHTML = 
+        `☀️ If you install a 3kW solar system (~₹80,000), you can save <b>₹${solarSavings}/year</b>.<br>
+         📉 ROI in about <b>${roiYears} years</b>.`;
+      document.getElementById("solarROI").classList.add("show");
+
+      let ctx = document.getElementById("energyChart").getContext("2d");
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: "pie",
+        data: {
+          labels: appliances.map(a => a.appliance),
+          datasets: [{ data: appliances.map(a => a.energy), backgroundColor: ["#4caf50","#81c784","#c8e6c9","#a5d6a7","#66bb6a","#388e3c"] }]
+        },
+        options: { responsive: true, plugins: { legend: { position: "bottom" } }, animation: { animateScale: true, animateRotate: true } }
+      });
+    }
+
+    function downloadPDF() {
+      const { jsPDF } = window.jspdf;
+      let doc = new jsPDF();
+      doc.setFontSize(18);
+      doc.text("Energy Saving Calculator Report", 20, 20);
+      let y = 40;
+      appliances.forEach(app => {
+        doc.setFontSize(12);
+        doc.text(`• ${app.appliance} - ${app.power}W, ${app.hours}h, ${app.energy.toFixed(2)} kWh, ₹${app.cost.toFixed(2)}`, 20, y);
+        y += 10;
+      });
+      doc.text("Summary:", 20, y + 10);
+      doc.setFontSize(12);
+      let summaryLines = doc.splitTextToSize(document.getElementById("result").innerText, 170);
+      doc.text(summaryLines, 20, y + 20);
+      let canvas = document.getElementById("energyChart");
+      if (canvas) {
+        let chartImage = canvas.toDataURL("image/png", 1.0);
+        doc.addPage(); doc.setFontSize(16);
+        doc.text("Energy Usage Chart", 20, 20);
+        doc.addImage(chartImage, "PNG", 15, 40, 180, 120);
+      }
+      doc.save("Energy_Saving_Report.pdf");
+    }
+
+    function downloadCSV() {
+      let rows = [["Appliance","Power(W)","Hours","Energy(kWh/day)","Cost(₹/day)"]];
+      appliances.forEach(a => rows.push([a.appliance,a.power,a.hours,a.energy.toFixed(2),a.cost.toFixed(2)]));
+      let csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n");
+      const link = document.createElement("a");
+      link.setAttribute("href", csvContent);
+      link.setAttribute("download", "energy_data.csv");
+      document.body.appendChild(link); link.click(); document.body.removeChild(link);
+    }
+  </script>
+</body>
+</html>
